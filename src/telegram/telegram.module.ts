@@ -5,11 +5,17 @@ import { config } from '../common/config';
 import { NestjsGrammyModule } from '@grammyjs/nestjs';
 import { TelegramProvider } from './telegram.provider';
 import { TelegramTokenEnum } from './enums/tokens/telegram.token.enum';
+import { UsersCenterModule } from 'src/users-center/users-center.module';
+import { TrainRequestModule } from 'src/train-request/train-request.module';
+import { TrainInfoModule } from 'src/train-info/train-info.module';
 
 @Module({
 	imports: [
-		ConfigModule.forRoot(), 
+		ConfigModule.forRoot(),
 		DatabaseModule,
+		UsersCenterModule,
+		TrainRequestModule,
+		TrainInfoModule,
 		NestjsGrammyModule.forRootAsync({
 			imports: [ConfigModule],
 			useFactory: async () => ({
