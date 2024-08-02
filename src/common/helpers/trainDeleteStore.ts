@@ -209,6 +209,7 @@ export class TrainDeleteStore {
 			return [
 				{ text: 'Появились билеты по вашему запросу', value: '\n' },
 				...result,
+				{ text: 'Ссылка', value: this.getLink(data) },
 			];
 		}
 		if (isDelete)
@@ -220,6 +221,17 @@ export class TrainDeleteStore {
 				...result,
 			];
 		return result;
+	}
+
+	private toBasicDate(data: TrainRequestEntity) {
+		return format(data.date, 'dd.MM.yyyy');
+	}
+
+	private getLink(data: TrainRequestEntity) {
+		const date = this.toBasicDate(data);
+		const from = this.citiesStore.getLinkIdByCode(data.from);
+		const to = this.citiesStore.getLinkIdByCode(data.to);
+		return `https://grandtrain.ru/tickets/${from}-${to}/${date}/`;
 	}
 
 	private getPlaceType(data: TrainRequestEntity) {

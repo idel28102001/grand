@@ -36,6 +36,12 @@ export class Cities {
 		return this.cities.find((e) => e.code === data);
 	}
 
+	getLinkIdByCode(data: number) {
+		const item = this.getItemByCode(data);
+		if (!item) return 0;
+		return item.linkId;
+	}
+
 	private preprocessData(data: { text: string }[]) {
 		const result = sliceIntoChunks(data, 2);
 		return this.keyboardStore.addCancel(result);
