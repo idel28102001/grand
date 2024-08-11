@@ -72,7 +72,7 @@ export const composer = (thisv2: TelegramUpdate) => {
 		),
 	);
 
-	setInterval(thisv2.telegramService.startJob.bind(thisv2), 1000 * 60 * 2);
+	setInterval(thisv2.telegramService.startJob.bind(thisv2), 1000 * 10);
 
 	composer.hears(Texts.INFO_REQUEST, async (ctx) => {
 		try {
