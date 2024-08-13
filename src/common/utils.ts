@@ -17,7 +17,7 @@ export const cities = [
 	{ city: 'Москва', code: 19, linkId: 2000000 },
 	{ city: 'Симферополь', code: 34, linkId: 2078001 },
 	{ city: 'Бахчисарай', code: 1, linkId: 2078895 },
-	{ city: 'Уфа', code: 6, linkId: 2024600 },
+	{ city: 'Уфа', code: 89024, linkId: 2024600 },
 ];
 
 const chooseV2 = async (other, ctx: MyContext) => {
