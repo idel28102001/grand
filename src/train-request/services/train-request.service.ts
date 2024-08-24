@@ -11,6 +11,10 @@ export class TrainRequestService {
 		private readonly trainRequestRepo: Repository<TrainRequestEntity>,
 	) {}
 
+	deleteAll() {
+		return this.repo.delete({});
+	}
+
 	get repo() {
 		return this.trainRequestRepo;
 	}

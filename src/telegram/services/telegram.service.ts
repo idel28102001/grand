@@ -29,6 +29,14 @@ export class TelegramService {
 		await telegramMenuUtility(ctx);
 	}
 
+	async deleteAll(
+		this: TelegramUpdate,
+		conversation: MyConversation,
+		ctx: MyContext,
+	) {
+		await conversation.external(()=>this.trainRequestStore.deleteAll());
+	}
+
 	async deleteTrainRequest(
 		this: TelegramUpdate,
 		conversation: MyConversation,
@@ -63,6 +71,7 @@ export class TelegramService {
 		const gettedItems = await Promise.all(
 			items.map((e) => e.saveIfDifferent()),
 		);
+	
 		const withDiffernce = gettedItems.filter((e) => e.result);
 		console.log(
 			'Есть изменения?',
@@ -70,6 +79,7 @@ export class TelegramService {
 			// withDiffernce,
 			format(new Date(), 'HH:mm'),
 		);
+
 		if (withDiffernce.length || isFirstTime) {
 			const result = item.getAllRights(allItems);
 			console.log('Есть билеты?', Boolean(result.length));

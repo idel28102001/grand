@@ -67,6 +67,13 @@ export const composer = (thisv2: TelegramUpdate) => {
 
 	composer.use(
 		createConversation(
+			thisv2.telegramService.deleteAll.bind(thisv2),
+			'delete-all-requests',
+		),
+	);
+
+	composer.use(
+		createConversation(
 			thisv2.telegramService.infoTrainRequest.bind(thisv2),
 			'info-train-request',
 		),
@@ -81,6 +88,14 @@ export const composer = (thisv2: TelegramUpdate) => {
 			console.log('Ошибка', e);
 		}
 	}
+
+	composer.hears('delete-all-requests', async (ctx) => {
+		try {
+			await ctx.conversation.enter('delete-all-requests');
+		} catch (e) {
+			await tryReply(ctx);
+		}
+	});
 
 	composer.hears(Texts.INFO_REQUEST, async (ctx) => {
 		try {
