@@ -27,6 +27,7 @@ export class TrainInfoEntity {
 	@OneToMany(() => TrainTypeInfoEntity, (item) => item.info, {
 		eager: true,
 		cascade: true,
+		onDelete: 'CASCADE',  onUpdate: 'CASCADE'
 	})
 	types: TrainTypeInfoEntity[];
 }

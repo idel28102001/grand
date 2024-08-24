@@ -74,27 +74,35 @@ export const composer = (thisv2: TelegramUpdate) => {
 
 	setInterval(thisv2.telegramService.startJob.bind(thisv2), 1000 * 10);
 
+	const tryReply = async (ctx: MyContext) => {
+		try {
+			ctx.reply('Ошибка');
+		} catch (e) {
+			console.log('Ошибка', e);
+		}
+	}
+
 	composer.hears(Texts.INFO_REQUEST, async (ctx) => {
 		try {
 			await ctx.conversation.enter('info-train-request');
 		} catch (e) {
-			ctx.reply('Ошибка');
+			await tryReply(ctx);
 		}
 	});
-
+	
 	composer.hears(Texts.ADD_REQUEST, async (ctx) => {
 		try {
 			await ctx.conversation.enter('create-train-request');
 		} catch (e) {
-			ctx.reply('Ошибка');
+			await tryReply(ctx);
 		}
 	});
-
+	
 	composer.hears(Texts.DELETE_REQUEST, async (ctx) => {
 		try {
 			await ctx.conversation.enter('delete-train-request');
 		} catch (e) {
-			ctx.reply('Ошибка');
+			await tryReply(ctx);
 		}
 	});
 

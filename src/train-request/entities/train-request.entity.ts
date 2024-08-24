@@ -50,6 +50,7 @@ export class TrainRequestEntity {
 
 	@ManyToOne(() => UsersCenterEntity, (user) => user.trainRequests, {
 		eager: true,
+		onDelete: 'CASCADE',  onUpdate: 'CASCADE'
 	})
 	user: UsersCenterEntity;
 }

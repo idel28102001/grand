@@ -16,6 +16,6 @@ export class TrainPositionInfoEntity {
 	})
 	position: PlacePosition;
 
-	@ManyToOne(() => TrainTypeInfoEntity, (item) => item.positions)
+	@ManyToOne(() => TrainTypeInfoEntity, (item) => item.positions, {onDelete: 'CASCADE',  onUpdate: 'CASCADE'})
 	type: TrainPositionInfoEntity;
 }

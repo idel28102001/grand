@@ -30,6 +30,6 @@ export class UsersCenterEntity {
 	@Column({ nullable: true })
 	lastname: string;
 
-	@OneToMany(() => TrainRequestEntity, (train) => train.user)
+	@OneToMany(() => TrainRequestEntity, (train) => train.user, {onDelete: 'CASCADE',  onUpdate: 'CASCADE'})
 	trainRequests: TrainRequestEntity[];
 }
