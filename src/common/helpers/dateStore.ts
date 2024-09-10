@@ -6,7 +6,7 @@ export class DateStore {
 	private keyboardStore = new KeyboardStore();
 
 	private get dates() {
-		return new Array(14)
+		return new Array(21)
 			.fill('')
 			.map((_, idx) => addDays(new Date(), idx).toDateString());
 	}
