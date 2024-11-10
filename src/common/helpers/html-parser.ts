@@ -125,7 +125,9 @@ export class HTMLParser {
 		const options = this.getChild(data, 'seats').childNodes.filter((e) =>
 			this.isInlcudes(e, 'seats_item'),
 		);
-		return options.map((option) => this.getOption(this.getChild(option, 'seats_item')));
+		return options.map((option) =>
+			this.getOption(this.getChild(option, 'seats_item')),
+		);
 	}
 
 	private parseItem(data: Node, props: Props): ItemType {

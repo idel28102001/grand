@@ -118,6 +118,7 @@ export class TrainDeleteStore {
 				middleProcess: () =>
 					conversation.external(() => {
 						const item = this.getItem();
+						if (!item) return;
 						return telegramStore.trainRequestStore.delete(
 							item.data.id,
 						);

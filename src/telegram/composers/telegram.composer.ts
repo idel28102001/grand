@@ -87,7 +87,7 @@ export const composer = (thisv2: TelegramUpdate) => {
 		} catch (e) {
 			console.log('Ошибка', e);
 		}
-	}
+	};
 
 	composer.hears('delete-all-requests', async (ctx) => {
 		try {
@@ -104,7 +104,7 @@ export const composer = (thisv2: TelegramUpdate) => {
 			await tryReply(ctx);
 		}
 	});
-	
+
 	composer.hears(Texts.ADD_REQUEST, async (ctx) => {
 		try {
 			await ctx.conversation.enter('create-train-request');
@@ -112,7 +112,7 @@ export const composer = (thisv2: TelegramUpdate) => {
 			await tryReply(ctx);
 		}
 	});
-	
+
 	composer.hears(Texts.DELETE_REQUEST, async (ctx) => {
 		try {
 			await ctx.conversation.enter('delete-train-request');
