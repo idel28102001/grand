@@ -64,6 +64,27 @@ export const prepareNDaysForOther = (allDays: Array<string>) => {
 	};
 };
 
+const getRange = (data:string) => format(new Date(data), 'd MMMM', { locale: ru })
+
+const inRange = (data:{start:string, end: string}) => {
+	return `${getRange(data.start)} - ${getRange(data.end)}`;
+}
+
+export const prepareNRangeForOther = (data: Array<{start:string, end: string}>) => {
+	 
+	const withTimes = data.map((e) => ({
+		text: inRange(e),
+		start: new Date(e.start),
+		end: new Date(e.end),
+	}));
+	const words = withTimes.map((e) => e.text);
+	return {
+		daysForKeyboard: sliceIntoChunks<{ text: string }>(withTimes, 3),
+		words,
+		withTimes,
+	};
+};
+
 export const prepareReply = async ({
 	ctx,
 	conversation,

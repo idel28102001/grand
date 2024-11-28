@@ -88,8 +88,13 @@ export class TrainRequestStore implements TrainRequestEntity {
 				callback: (data) => this.updateTo(data.answer),
 			},
 			{
+				text: () => 'Выберите период даты',
+				keyboard: () => this.dateStore.forRange,
+				callback: (data) => this.updateRange(data.answer),
+			},
+			{
 				text: () => 'Выберите дату',
-				keyboard: () => this.dateStore.forKeyobard,
+				keyboard: () => this.dateStore.forKeyobard(this.range),
 				callback: (data) => this.updateDate(data.answer),
 			},
 			{
@@ -195,6 +200,8 @@ export class TrainRequestStore implements TrainRequestEntity {
 	specificTime = null;
 	user: UsersCenterEntity;
 
+	private range = '';
+
 	get minSpotValues() {
 		return new Array(4).fill('').map((_, idx) => (idx + 1).toString());
 	}
@@ -277,9 +284,16 @@ export class TrainRequestStore implements TrainRequestEntity {
 	private setDate(data: Date) {
 		this.date = data;
 	}
+	private setRange(data: string) {
+		this.range = data;
+	}
 
 	updateDate(data: string) {
 		this.setDate(this.dateStore.getDateField(data));
+	}
+
+	private updateRange(data: string) {
+		this.setRange(data);
 	}
 
 	private setAllPlacePositions() {

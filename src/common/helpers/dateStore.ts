@@ -1,35 +1,53 @@
-import { addDays } from 'date-fns';
-import { prepareNDaysForOther } from '../utils';
+import { addDays, differenceInDays, parse } from 'date-fns';
+import { prepareNDaysForOther, prepareNRangeForOther } from '../utils';
 import { KeyboardStore } from './keyboardStore';
+import { ru } from 'date-fns/locale';
 
 export class DateStore {
 	private keyboardStore = new KeyboardStore();
 
-	private get dates() {
-		return new Array(21)
+	private dates(dateInfo:string) {
+		const [start, end] = dateInfo.split(' - ');
+		const startDate = parse(start, 'd MMMM', new Date(),{ locale: ru });
+		const endDate = parse(end, 'd MMMM', new Date(),{ locale: ru });
+		const diff = differenceInDays(endDate, startDate);
+		return new Array(diff)
 			.fill('')
-			.map((_, idx) => addDays(new Date(), idx).toDateString());
+			.map((_, idx) => addDays(startDate, idx).toDateString());
 	}
 
-	private get getKeyboradsInfo() {
-		return prepareNDaysForOther(this.dates);
+	private get rangeDates() {
+		return new Array(10)
+			.fill('')
+			.map((_, idx) => ({start:addDays(new Date(), idx*14).toDateString(), end:addDays(new Date(), (idx+1)*14).toDateString()}));
 	}
 
-	get forKeyobard() {
+	private getKeyboradsInfo(data:string) {
+		return prepareNDaysForOther(this.dates(data));
+	}
+
+	private get getKeyboradsInfoRange() {
+		return prepareNRangeForOther(this.rangeDates);
+	}
+
+	forKeyobard(data: string) {
 		return this.keyboardStore.addCancel(
-			this.getKeyboradsInfo.daysForKeyboard,
+			this.getKeyboradsInfo(data).daysForKeyboard,
 		);
 	}
 
-	private get getTimes() {
-		return this.getKeyboradsInfo.withTimes;
+	get forRange() {
+		return this.keyboardStore.addCancel(
+			this.getKeyboradsInfoRange.daysForKeyboard,
+		);
 	}
 
 	getDate(data: string) {
-		return this.getTimes.find((e) => e.text === data);
+		const [dateP] = data.split(' (');
+		return parse(dateP, 'd MMMM', new Date(),{ locale: ru });
 	}
 
 	getDateField(data: string) {
-		return this.getDate(data).date;
+		return this.getDate(data);
 	}
 }
