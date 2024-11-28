@@ -1,4 +1,4 @@
-import { addDays, differenceInDays, parse } from 'date-fns';
+import { addDays, addYears, compareAsc, differenceInDays, parse } from 'date-fns';
 import { prepareNDaysForOther, prepareNRangeForOther } from '../utils';
 import { KeyboardStore } from './keyboardStore';
 import { ru } from 'date-fns/locale';
@@ -9,8 +9,11 @@ export class DateStore {
 	private dates(dateInfo:string) {
 		const [start, end] = dateInfo.split(' - ');
 		const startDate = parse(start, 'd MMMM', new Date(),{ locale: ru });
-		const endDate = parse(end, 'd MMMM', new Date(),{ locale: ru });
-		const diff = differenceInDays(endDate, startDate);
+		let endDate = parse(end, 'd MMMM', new Date(),{ locale: ru });
+		if (compareAsc(startDate, endDate)===1) {
+			endDate = addYears(endDate, 1);
+		}
+		const diff = differenceInDays(endDate, startDate)+1;
 		return new Array(diff)
 			.fill('')
 			.map((_, idx) => addDays(startDate, idx).toDateString());
@@ -19,7 +22,7 @@ export class DateStore {
 	private get rangeDates() {
 		return new Array(10)
 			.fill('')
-			.map((_, idx) => ({start:addDays(new Date(), idx*14).toDateString(), end:addDays(new Date(), (idx+1)*14).toDateString()}));
+			.map((_, idx) => ({start:addDays(new Date(), idx*14).toDateString(), end:addDays(new Date(), (idx+1)*14-1).toDateString()}));
 	}
 
 	private getKeyboradsInfo(data:string) {
