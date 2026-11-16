@@ -64,34 +64,46 @@ export class TelegramService {
 		isFirstTime = false,
 	) {
 		const some = new TrainDeleteStore();
-		const allItems = await item.getParsed();
+		const allItems = await item.fetchParsed();
+		// Site did not answer: "no tickets" would be wrong, try next time.
+		if (allItems === null) return;
+
+		// The search snapshot is shared by all requests on this route/date.
+		// It is not what decides a notification any more; it keeps the
+		// side-seat checks (sideSpots/noSideSpots) between runs.
 		const items = allItems.map(
 			(e) => new TrainInfoStore(e, this.trainInfoStore),
 		);
 		await Promise.all(items.map((e) => e.load()));
-		const gettedItems = await Promise.all(
+		const snapshots = await Promise.all(
 			items.map((e) => e.saveIfDifferent()),
 		);
 
-		const withDiffernce = gettedItems.filter((e) => e.result);
-		console.log(
-			'Есть изменения?',
-			Boolean(withDiffernce.length),
-			// withDiffernce,
-			format(new Date(), 'HH:mm'),
+		const result = await item.getAllRightsDetailed(
+			allItems,
+			new SideCacheStore(snapshots, this.trainInfoStore),
 		);
 
-		if (withDiffernce.length || isFirstTime) {
-			const result = await item.getAllRightsDetailed(
-				allItems,
-				new SideCacheStore(gettedItems, this.trainInfoStore),
-			);
-			console.log('Есть билеты?', Boolean(result.length));
-			if (!result.length) return;
-			this.bot.api.sendMessage(
+		// Notify each request about its own fitting tickets: only when they
+		// differ from what this request was last notified about.
+		const signature = item.getSignature(result);
+		const changed = isFirstTime || signature !== (item.lastNotified ?? '');
+		console.log(
+			`Запрос ${item.id}: подходит ${result.length}, изменилось ${changed}`,
+			format(new Date(), 'HH:mm'),
+		);
+		if (!changed) return;
+
+		if (result.length) {
+			await this.bot.api.sendMessage(
 				item.entity.user.telegramId,
 				some.formatItemNotify(item),
 			);
+		}
+		// Remember also "nothing fits", so tickets that come back are reported.
+		if (item.id > 0) {
+			await this.trainRequestStore.setLastNotified(item.id, signature);
+			item.lastNotified = signature;
 		}
 	}
 

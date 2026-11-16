@@ -45,6 +45,10 @@ export class TrainRequestService {
 		});
 	}
 
+	setLastNotified(id: number, lastNotified: string) {
+		return this.repo.update(id, { lastNotified });
+	}
+
 	save(data: TrainRequestStore) {
 		const result = this.create(data);
 		return this.repo.save(result);

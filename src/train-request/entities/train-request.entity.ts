@@ -52,6 +52,14 @@ export class TrainRequestEntity {
 	@Column({ nullable: false, default: false })
 	excludeSide: boolean;
 
+	/**
+	 * Signature of the tickets this request was last notified about
+	 * (trains, classes and seat counts that fit). A notification is sent
+	 * only when the fitting tickets differ from it. null = never notified.
+	 */
+	@Column({ type: 'text', nullable: true, default: null })
+	lastNotified: string | null;
+
 	@ManyToOne(() => UsersCenterEntity, (user) => user.trainRequests, {
 		eager: true,
 		onDelete: 'CASCADE',

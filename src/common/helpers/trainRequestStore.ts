@@ -60,7 +60,12 @@ export class TrainRequestStore implements TrainRequestEntity {
 				(e) => e.type !== PlaceType.SEAT && this.filterInfoItem(e),
 			);
 			if (fitsWithoutSeat) {
-				result.push(item);
+				// Plackart numbers here still include side seats: leave them
+				// out instead of reporting unchecked seats.
+				result.push({
+					...item,
+					info: item.info.filter((e) => e.type !== PlaceType.SEAT),
+				});
 				continue;
 			}
 			const detailed = await this.seatDetailsStore.withoutSide(
@@ -94,9 +99,42 @@ export class TrainRequestStore implements TrainRequestEntity {
 		return data.info.some((e) => this.filterInfoItem(e));
 	}
 
+	/**
+	 * What fits this request, as a stable string: departure, class and the
+	 * seat counts of the chosen positions. Prices and classes that do not
+	 * fit are left out, so they do not trigger a notification.
+	 */
+	getSignature(data: ItemType[]): string {
+		return data
+			.map((item) => {
+				const options = item.info
+					.filter((e) => this.filterInfoItem(e))
+					.map((option) => {
+						const places = option.places
+							.filter((e) =>
+								this.placePositions.includes(e.position),
+							)
+							.map((e) => `${e.position}=${e.count}`)
+							.sort()
+							.join(',');
+						return `${option.type}:${places}`;
+					})
+					.sort()
+					.join('|');
+				return `${new Date(item.startDate).toISOString()}#${options}`;
+			})
+			.sort()
+			.join(';');
+	}
+
 	async getParsed() {
+		return (await this.fetchParsed()) ?? [];
+	}
+
+	/** Parsed search results; null when the site did not answer. */
+	async fetchParsed(): Promise<ItemType[] | null> {
 		const data = await this.getInfo();
-		if (!data) return [];
+		if (!data) return null;
 		const root = htmlParser(data);
 		return this.htmlParser.parse(root, {
 			date: this.formatttedDate,
@@ -184,10 +222,13 @@ export class TrainRequestStore implements TrainRequestEntity {
 			{
 				text: () => 'Запрос добавлен',
 				justText: true,
-				middleProcess: () =>
-					conversation.external(() =>
-						store.trainRequestStore.save(this),
-					),
+				middleProcess: async () => {
+					const id = await conversation.external(() =>
+						store.trainRequestStore.save(this).then((e) => e.id),
+					);
+					// Needed to store what the first check notified about.
+					this.id = id;
+				},
 			},
 		];
 	}
@@ -243,6 +284,7 @@ export class TrainRequestStore implements TrainRequestEntity {
 	placeTypes = [PlaceType.COUPE, PlaceType.SEAT];
 	specificTime = null;
 	excludeSide = false;
+	lastNotified: string | null = null;
 	user: UsersCenterEntity;
 
 	private setExcludeSide(data: boolean) {
