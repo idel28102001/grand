@@ -34,7 +34,7 @@ export class TelegramService {
 		conversation: MyConversation,
 		ctx: MyContext,
 	) {
-		await conversation.external(()=>this.trainRequestStore.deleteAll());
+		await conversation.external(() => this.trainRequestStore.deleteAll());
 	}
 
 	async deleteTrainRequest(
@@ -71,7 +71,7 @@ export class TelegramService {
 		const gettedItems = await Promise.all(
 			items.map((e) => e.saveIfDifferent()),
 		);
-	
+
 		const withDiffernce = gettedItems.filter((e) => e.result);
 		console.log(
 			'Есть изменения?',
@@ -95,7 +95,15 @@ export class TelegramService {
 		const items = await this.trainRequestStore.getAll();
 		const converted = items.map((e) => new TrainRequestStore(e));
 		for (const item of converted) {
-			await this.telegramService.checkOnTickets.call(this, item);
+			// One failing request must not stop the others or crash the app.
+			try {
+				await this.telegramService.checkOnTickets.call(this, item);
+			} catch (e) {
+				console.error(
+					`checkOnTickets failed for request ${item.id}:`,
+					e instanceof Error ? e.message : e,
+				);
+			}
 
 			await new Promise((res) => setTimeout(res, 500));
 		}

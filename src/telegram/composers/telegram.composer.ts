@@ -79,7 +79,12 @@ export const composer = (thisv2: TelegramUpdate) => {
 		),
 	);
 
-	setInterval(thisv2.telegramService.startJob.bind(thisv2), 1000 * 10);
+	// An unhandled rejection here would kill the whole process (Node 18).
+	setInterval(() => {
+		thisv2.telegramService.startJob
+			.call(thisv2)
+			.catch((e) => console.error('startJob failed:', e));
+	}, 1000 * 10);
 
 	const tryReply = async (ctx: MyContext) => {
 		try {

@@ -233,14 +233,19 @@ export class HTMLParser {
 	private getOption(option: HTMLElement): PlaceTypeItem | null {
 		// The first .train_places_name is the full name ("Плацкарт"),
 		// the second one is the mobile short name ("Плац").
-		const type = this.text(option.querySelector('.train_places_name'));
+		const name = this.text(option.querySelector('.train_places_name'));
+		const type = this.toPlaceType(name);
 		const price = this.toPrice(
 			this.text(option.querySelector('.train_cost')),
 		);
-		if (!type || price === null) return null;
+		if (!type) {
+			if (name) console.warn(`HTMLParser: unknown place type "${name}"`);
+			return null;
+		}
+		if (price === null) return null;
 
 		return {
-			type: type as PlaceType,
+			type,
 			price,
 			places: this.toPlaces(
 				this.text(option.querySelector('.train_seats_count')),
@@ -252,16 +257,50 @@ export class HTMLParser {
 		return this.toPrice(this.text(leg.querySelector('.train_cost'))) ?? 0;
 	}
 
-	/** "6 низ, 51 верх" / "6&nbsp;низ, 51&nbsp;верх" → [{6, низ}, {51, верх}] */
+	/**
+	 * "6 низ, 51 верх" / "6&nbsp;низ" / "15 мест" → [{6, низ}, {51, верх}] …
+	 * Only values of PlacePosition are returned: they go into a Postgres enum,
+	 * so anything else would fail the insert.
+	 */
 	private toPlaces(data: string): PlacePositionItem[] {
-		return data
-			.split(',')
-			.map((e) => /(\d+)\s*(\S+)/.exec(e.trim()))
-			.filter((match) => match !== null)
-			.map(([, count, position]) => ({
-				count: Number(count),
-				position: position as PlacePosition,
-			}));
+		const result = new Map<PlacePosition, number>();
+		for (const part of data.split(',')) {
+			const match = /(\d+)\s*(\S+)/.exec(part.trim());
+			if (!match) continue;
+			const position = this.toPlacePosition(match[2]);
+			if (!position) {
+				console.warn(
+					`HTMLParser: unknown place position "${part.trim()}"`,
+				);
+				continue;
+			}
+			result.set(
+				position,
+				(result.get(position) ?? 0) + Number(match[1]),
+			);
+		}
+		return [...result].map(([position, count]) => ({ position, count }));
+	}
+
+	/** "верх"/"верхних" → верх, "низ"/"нижних" → низ, "место"/"места"/"мест" → места */
+	private toPlacePosition(word: string): PlacePosition | null {
+		const value = word.toLowerCase();
+		if (value.startsWith('верх')) return PlacePosition.TOP;
+		if (value.startsWith('низ') || value.startsWith('нижн')) {
+			return PlacePosition.BOTTOM;
+		}
+		if (value.startsWith('мест')) return PlacePosition.PlACES;
+		return null;
+	}
+
+	/** Full or short car class name → PlaceType ("Плац" → Плацкарт). */
+	private toPlaceType(name: string): PlaceType | null {
+		const value = name.toLowerCase();
+		if (value.startsWith('плац')) return PlaceType.SEAT;
+		if (value.startsWith('купе')) return PlaceType.COUPE;
+		if (value === 'св' || value.startsWith('св ')) return PlaceType.SV;
+		if (value.startsWith('люкс')) return PlaceType.LUX;
+		return null;
 	}
 
 	/** "от 4 381,00 ₽" → 4381 */
