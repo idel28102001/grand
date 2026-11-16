@@ -2,6 +2,11 @@ import { HTMLElement } from 'node-html-parser';
 import { parse, addMinutes, addSeconds } from 'date-fns';
 import { PlacePosition } from 'src/train-info/enums/place-position.enum';
 import { PlaceType } from 'src/train-info/enums/place-type.enum';
+import {
+	intersectPlaces,
+	toPlacePosition,
+	toPlaceType,
+} from './place-normalize';
 
 type Props = {
 	date: string;
@@ -20,12 +25,25 @@ export type PlaceTypeItem = {
 	type: PlaceType;
 };
 
+/** A train leg of a result: enough to open its seat page on the site. */
+export type TrainLeg = {
+	/** Train number as the site writes it, e.g. "092М". */
+	train: string;
+	/** Departure date of this leg, "dd.MM.yyyy". */
+	date: string;
+	/** Station codes, e.g. 2000003 (Moscow Kazansky). */
+	from: string;
+	to: string;
+};
+
 export type ItemType = {
 	info: PlaceTypeItem[];
 	startDate: Date;
 	endDate: Date;
 	from: number;
 	to: number;
+	/** Train legs (bus legs are left out); used to load detailed seats. */
+	trainLegs: TrainLeg[];
 };
 
 /** Times on grandtrain.ru are Moscow time (UTC+3, no DST). */
@@ -88,7 +106,29 @@ export class HTMLParser {
 			startDate,
 			endDate,
 			info: this.getInfo(legs),
+			trainLegs: legs
+				.filter((leg) => this.getOptions(leg).length > 0)
+				.map((leg) => this.getTrainLeg(leg))
+				.filter((e): e is TrainLeg => e !== null),
 		};
+	}
+
+	/**
+	 * Reads the train route link of a leg:
+	 * ".../train.route/ajax.php?train=092М&date=03.12.2026&from=2000003&to=2078001"
+	 */
+	private getTrainLeg(leg: HTMLElement): TrainLeg | null {
+		const src = leg
+			.querySelector('.train_num_cities')
+			?.getAttribute('data-src');
+		if (!src) return null;
+		const query = new URLSearchParams(src.split('?')[1] ?? '');
+		const train = query.get('train');
+		const date = query.get('date');
+		const from = query.get('from');
+		const to = query.get('to');
+		if (!train || !date || !from || !to) return null;
+		return { train, date, from, to };
 	}
 
 	/** Direct train → [itself]; route with transfers → every leg in order. */
@@ -200,27 +240,12 @@ export class HTMLParser {
 					price: this.round(
 						all.reduce((acc, e) => acc + e.price, 0) + fixedCost,
 					),
-					places: this.intersectPlaces(all.map((e) => e.places)),
+					places: intersectPlaces(all.map((e) => e.places)),
 				};
 			})
 			.filter(
 				(e): e is PlaceTypeItem => e !== null && e.places.length > 0,
 			);
-	}
-
-	/** Seats free on every leg: per position, the minimum over legs. */
-	private intersectPlaces(legs: PlacePositionItem[][]): PlacePositionItem[] {
-		const [first, ...rest] = legs;
-		return first
-			.map(({ position, count }) => {
-				const counts = rest.map(
-					(places) =>
-						places.find((e) => e.position === position)?.count,
-				);
-				if (counts.some((e) => e === undefined)) return null;
-				return { position, count: Math.min(count, ...counts) };
-			})
-			.filter((e): e is PlacePositionItem => e !== null);
 	}
 
 	private getOptions(leg: HTMLElement): PlaceTypeItem[] {
@@ -234,7 +259,7 @@ export class HTMLParser {
 		// The first .train_places_name is the full name ("Плацкарт"),
 		// the second one is the mobile short name ("Плац").
 		const name = this.text(option.querySelector('.train_places_name'));
-		const type = this.toPlaceType(name);
+		const type = toPlaceType(name);
 		const price = this.toPrice(
 			this.text(option.querySelector('.train_cost')),
 		);
@@ -267,7 +292,7 @@ export class HTMLParser {
 		for (const part of data.split(',')) {
 			const match = /(\d+)\s*(\S+)/.exec(part.trim());
 			if (!match) continue;
-			const position = this.toPlacePosition(match[2]);
+			const position = toPlacePosition(match[2]);
 			if (!position) {
 				console.warn(
 					`HTMLParser: unknown place position "${part.trim()}"`,
@@ -280,27 +305,6 @@ export class HTMLParser {
 			);
 		}
 		return [...result].map(([position, count]) => ({ position, count }));
-	}
-
-	/** "верх"/"верхних" → верх, "низ"/"нижних" → низ, "место"/"места"/"мест" → места */
-	private toPlacePosition(word: string): PlacePosition | null {
-		const value = word.toLowerCase();
-		if (value.startsWith('верх')) return PlacePosition.TOP;
-		if (value.startsWith('низ') || value.startsWith('нижн')) {
-			return PlacePosition.BOTTOM;
-		}
-		if (value.startsWith('мест')) return PlacePosition.PlACES;
-		return null;
-	}
-
-	/** Full or short car class name → PlaceType ("Плац" → Плацкарт). */
-	private toPlaceType(name: string): PlaceType | null {
-		const value = name.toLowerCase();
-		if (value.startsWith('плац')) return PlaceType.SEAT;
-		if (value.startsWith('купе')) return PlaceType.COUPE;
-		if (value === 'св' || value.startsWith('св ')) return PlaceType.SV;
-		if (value.startsWith('люкс')) return PlaceType.LUX;
-		return null;
 	}
 
 	/** "от 4 381,00 ₽" → 4381 */

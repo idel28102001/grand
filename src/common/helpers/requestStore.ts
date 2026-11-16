@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { TrainRequestStore } from './trainRequestStore';
-import { readFile } from 'fs/promises';
+import type { TrainLeg } from './html-parser';
 
 export class RequestStore {
 	get(data: TrainRequestStore) {
@@ -25,5 +25,24 @@ export class RequestStore {
 			)
 			.then((e) => e.data)
 			.catch(() => null);
+	}
+
+	/** Train page with the seat map: /search/{from}-{to}/{date}/{train}/ */
+	getTrainPage(leg: TrainLeg): Promise<string | null> {
+		const url =
+			'https://grandtrain.ru/search/' +
+			`${leg.from}-${leg.to}/${leg.date}/${encodeURIComponent(
+				leg.train,
+			)}/`;
+		return axios
+			.get<string>(url, { responseType: 'text', timeout: 30_000 })
+			.then((e) => e.data)
+			.catch((e) => {
+				console.warn(
+					`getTrainPage failed for ${url}:`,
+					e?.message ?? e,
+				);
+				return null;
+			});
 	}
 }

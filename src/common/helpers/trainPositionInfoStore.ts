@@ -7,6 +7,8 @@ export class TrainPositionInfoStore implements TrainPositionInfoEntity {
 	id = -1;
 	position = PlacePosition.BOTTOM;
 	spots = 0;
+	sideSpots: number | null = null;
+	noSideSpots: number | null = null;
 	type: TrainPositionInfoEntity;
 
 	citiesStore = new Cities();

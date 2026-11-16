@@ -48,9 +48,14 @@ export class TrainRequestEntity {
 	@Column({ nullable: true, type: 'timestamp' })
 	specificTime: Date | null;
 
+	/** Side seats (боковые) do not count; checked on the train page. */
+	@Column({ nullable: false, default: false })
+	excludeSide: boolean;
+
 	@ManyToOne(() => UsersCenterEntity, (user) => user.trainRequests, {
 		eager: true,
-		onDelete: 'CASCADE',  onUpdate: 'CASCADE'
+		onDelete: 'CASCADE',
+		onUpdate: 'CASCADE',
 	})
 	user: UsersCenterEntity;
 }

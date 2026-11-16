@@ -205,6 +205,9 @@ export class TrainDeleteStore {
 				text: 'Позиции места',
 				value: this.getPlacePosition(data),
 			},
+			...(data.excludeSide
+				? [{ text: 'Боковые места', value: 'не подходят' }]
+				: []),
 		];
 		if (isSended) {
 			return [

@@ -8,6 +8,7 @@ import { TrainDeleteStore } from 'src/common/helpers/trainDeleteStore';
 import { telegramMenuUtility } from '../utility/telegramMenu.utility';
 import { TrainInfoStore } from 'src/common/helpers/trainInfoStore';
 import { format } from 'date-fns';
+import { SideCacheStore } from 'src/common/helpers/sideCacheStore';
 
 @Injectable()
 export class TelegramService {
@@ -81,7 +82,10 @@ export class TelegramService {
 		);
 
 		if (withDiffernce.length || isFirstTime) {
-			const result = item.getAllRights(allItems);
+			const result = await item.getAllRightsDetailed(
+				allItems,
+				new SideCacheStore(gettedItems, this.trainInfoStore),
+			);
 			console.log('Есть билеты?', Boolean(result.length));
 			if (!result.length) return;
 			this.bot.api.sendMessage(

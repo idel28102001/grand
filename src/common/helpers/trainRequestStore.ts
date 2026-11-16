@@ -11,6 +11,7 @@ import { HTMLParser, PlaceTypeItem, ItemType } from './html-parser';
 import { MyContext, MyConversation } from '../utils';
 import { Item, ReplyStore } from './replyStore';
 import { ConfirmStore } from './confirmStore';
+import { SeatDetailsStore, SideCache } from './seatDetailsStore';
 import { TelegramUpdate } from 'src/telegram/updates/telegram.update';
 import { PlaceType } from 'src/train-info/enums/place-type.enum';
 import { PlacePosition } from 'src/train-info/enums/place-position.enum';
@@ -35,6 +36,40 @@ export class TrainRequestStore implements TrainRequestEntity {
 		const result = this.getParsedInfo(data);
 		const items = result.filter((e) => this.filterItem(e));
 		return items;
+	}
+
+	/**
+	 * Like getAllRights, but with excludeSide also checks the train pages:
+	 * the search only says "48 низ", which may all be side seats.
+	 * Train pages are loaded only for results that passed the cheap filter.
+	 */
+	async getAllRightsDetailed(
+		data: ItemType[],
+		cache?: SideCache,
+	): Promise<ItemType[]> {
+		const items = this.getAllRights(data);
+		if (!this.excludeSide || !this.placeTypes.includes(PlaceType.SEAT)) {
+			return items;
+		}
+
+		const result: ItemType[] = [];
+		for (const item of items) {
+			// Already fits by a class without side seats → no need to load
+			// a ~2 MB train page.
+			const fitsWithoutSeat = item.info.some(
+				(e) => e.type !== PlaceType.SEAT && this.filterInfoItem(e),
+			);
+			if (fitsWithoutSeat) {
+				result.push(item);
+				continue;
+			}
+			const detailed = await this.seatDetailsStore.withoutSide(
+				item,
+				cache,
+			);
+			if (detailed && this.filterItem(detailed)) result.push(detailed);
+		}
+		return result;
 	}
 
 	private filterTypes(data: PlaceTypeItem) {
@@ -108,6 +143,14 @@ export class TrainRequestStore implements TrainRequestEntity {
 				callback: (data) => this.updatePlacePosition(data.answer),
 			},
 			{
+				text: () => 'Боковые места подходят?',
+				keyboard: () => this.confirmStore.answerOptions,
+				// Side seats exist only in plackart cars.
+				showCondition: () => this.placeTypes.includes(PlaceType.SEAT),
+				callback: (data) =>
+					this.setExcludeSide(!this.confirmStore.isYes(data.answer)),
+			},
+			{
 				text: () => 'Укажите кол-во пассажиров',
 				keyboard: () => this.minSpotsOptions,
 				callback: (data) => this.updateMinSpot(data.answer),
@@ -151,6 +194,7 @@ export class TrainRequestStore implements TrainRequestEntity {
 
 	keyboardStore = new KeyboardStore();
 	htmlParser = new HTMLParser();
+	seatDetailsStore = new SeatDetailsStore();
 
 	requestStore = new RequestStore();
 	replyStore = new ReplyStore();
@@ -198,7 +242,12 @@ export class TrainRequestStore implements TrainRequestEntity {
 	placePositions = [PlacePosition.TOP, PlacePosition.BOTTOM];
 	placeTypes = [PlaceType.COUPE, PlaceType.SEAT];
 	specificTime = null;
+	excludeSide = false;
 	user: UsersCenterEntity;
+
+	private setExcludeSide(data: boolean) {
+		this.excludeSide = data;
+	}
 
 	private range = '';
 
