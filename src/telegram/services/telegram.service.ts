@@ -8,7 +8,7 @@ import { TrainDeleteStore } from 'src/common/helpers/trainDeleteStore';
 import { telegramMenuUtility } from '../utility/telegramMenu.utility';
 import { TrainInfoStore } from 'src/common/helpers/trainInfoStore';
 import { format } from 'date-fns';
-import { SideCacheStore } from 'src/common/helpers/sideCacheStore';
+import { SeatCacheStore } from 'src/common/helpers/seatCacheStore';
 
 @Injectable()
 export class TelegramService {
@@ -70,7 +70,7 @@ export class TelegramService {
 
 		// The search snapshot is shared by all requests on this route/date.
 		// It is not what decides a notification any more; it keeps the
-		// side-seat checks (sideSpots/noSideSpots) between runs.
+		// free seats from the train pages (train-type-info.freeSeats) between runs.
 		const items = allItems.map(
 			(e) => new TrainInfoStore(e, this.trainInfoStore),
 		);
@@ -81,7 +81,7 @@ export class TelegramService {
 
 		const result = await item.getAllRightsDetailed(
 			allItems,
-			new SideCacheStore(snapshots, this.trainInfoStore),
+			new SeatCacheStore(snapshots, this.trainInfoStore),
 		);
 
 		// Notify each request about its own fitting tickets: only when they

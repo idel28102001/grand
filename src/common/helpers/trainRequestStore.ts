@@ -11,7 +11,8 @@ import { HTMLParser, PlaceTypeItem, ItemType } from './html-parser';
 import { MyContext, MyConversation } from '../utils';
 import { Item, ReplyStore } from './replyStore';
 import { ConfirmStore } from './confirmStore';
-import { SeatDetailsStore, SideCache } from './seatDetailsStore';
+import { SeatCache, SeatDetailsStore, SeatFilter } from './seatDetailsStore';
+import { SECTIONS_COUNT } from './place-normalize';
 import { TelegramUpdate } from 'src/telegram/updates/telegram.update';
 import { PlaceType } from 'src/train-info/enums/place-type.enum';
 import { PlacePosition } from 'src/train-info/enums/place-position.enum';
@@ -38,38 +39,50 @@ export class TrainRequestStore implements TrainRequestEntity {
 		return items;
 	}
 
+	get seatFilter(): SeatFilter {
+		return {
+			excludeSide: this.excludeSide,
+			sectionFrom: this.sectionFrom,
+			sectionTo: this.sectionTo,
+		};
+	}
+
 	/**
-	 * Like getAllRights, but with excludeSide also checks the train pages:
-	 * the search only says "48 низ", which may all be side seats.
-	 * Train pages are loaded only for results that passed the cheap filter.
+	 * Like getAllRights, but also checks the train pages when the request
+	 * excludes side seats or limits sections: the search only says
+	 * "48 низ", not which seats these are. Train pages are loaded only for
+	 * results that passed the cheap filter and only fit through a class
+	 * that needs the check.
 	 */
 	async getAllRightsDetailed(
 		data: ItemType[],
-		cache?: SideCache,
+		cache?: SeatCache,
 	): Promise<ItemType[]> {
 		const items = this.getAllRights(data);
-		if (!this.excludeSide || !this.placeTypes.includes(PlaceType.SEAT)) {
-			return items;
-		}
+		const filter = this.seatFilter;
+		const needsDetails = (type: PlaceType) =>
+			SeatDetailsStore.needsDetails(type, filter);
+		if (!this.placeTypes.some(needsDetails)) return items;
 
 		const result: ItemType[] = [];
 		for (const item of items) {
-			// Already fits by a class without side seats → no need to load
+			// Already fits by a class that needs no check → no need to load
 			// a ~2 MB train page.
-			const fitsWithoutSeat = item.info.some(
-				(e) => e.type !== PlaceType.SEAT && this.filterInfoItem(e),
+			const fitsWithoutDetails = item.info.some(
+				(e) => !needsDetails(e.type) && this.filterInfoItem(e),
 			);
-			if (fitsWithoutSeat) {
-				// Plackart numbers here still include side seats: leave them
-				// out instead of reporting unchecked seats.
+			if (fitsWithoutDetails) {
+				// The other classes are not checked: leave them out instead
+				// of reporting seats that may not fit the filter.
 				result.push({
 					...item,
-					info: item.info.filter((e) => e.type !== PlaceType.SEAT),
+					info: item.info.filter((e) => !needsDetails(e.type)),
 				});
 				continue;
 			}
-			const detailed = await this.seatDetailsStore.withoutSide(
+			const detailed = await this.seatDetailsStore.apply(
 				item,
+				filter,
 				cache,
 			);
 			if (detailed && this.filterItem(detailed)) result.push(detailed);
@@ -189,6 +202,44 @@ export class TrainRequestStore implements TrainRequestEntity {
 					this.setExcludeSide(!this.confirmStore.isYes(data.answer)),
 			},
 			{
+				text: () =>
+					`Искать во всех секциях вагона (1–${SECTIONS_COUNT})?\n` +
+					'Секции 1 и 9 — у туалетов.',
+				keyboard: () => this.confirmStore.answerOptions,
+				// Sections are known for plackart, coupe and SV cars.
+				showCondition: () =>
+					[PlaceType.SEAT, PlaceType.COUPE, PlaceType.SV].some((e) =>
+						this.placeTypes.includes(e),
+					),
+				callback: (data) => {
+					if (this.confirmStore.isYes(data.answer)) {
+						this.setSections(null, null);
+					}
+				},
+				children: [
+					{
+						text: () => 'С какой секции искать?',
+						keyboard: () => this.sectionOptions(1),
+						showCondition: ({ answer }) =>
+							!this.confirmStore.isYes(answer),
+						callback: (data) =>
+							this.setSections(this.toSection(data.answer), null),
+					},
+					{
+						text: () => 'По какую секцию искать?',
+						keyboard: () =>
+							this.sectionOptions(this.sectionFrom ?? 1),
+						showCondition: ({ answer }) =>
+							!this.confirmStore.isYes(answer),
+						callback: (data) =>
+							this.setSections(
+								this.sectionFrom,
+								this.toSection(data.answer),
+							),
+					},
+				],
+			},
+			{
 				text: () => 'Укажите кол-во пассажиров',
 				keyboard: () => this.minSpotsOptions,
 				callback: (data) => this.updateMinSpot(data.answer),
@@ -289,6 +340,29 @@ export class TrainRequestStore implements TrainRequestEntity {
 
 	private setExcludeSide(data: boolean) {
 		this.excludeSide = data;
+	}
+
+	sectionFrom: number | null = null;
+	sectionTo: number | null = null;
+
+	/** null, null = all sections. "По какую" below "с какой" is swapped. */
+	private setSections(from: number | null, to: number | null) {
+		if (from != null && to != null && to < from) [from, to] = [to, from];
+		this.sectionFrom = from;
+		this.sectionTo = to;
+	}
+
+	private toSection(answer: string): number | null {
+		const value = Number(answer);
+		if (!Number.isInteger(value)) return null;
+		if (value < 1 || value > SECTIONS_COUNT) return null;
+		return value;
+	}
+
+	private sectionOptions(from: number) {
+		const values = [];
+		for (let i = from; i <= SECTIONS_COUNT; i++) values.push(String(i));
+		return this.keyboardOptinos.convert(values, 5);
 	}
 
 	private range = '';

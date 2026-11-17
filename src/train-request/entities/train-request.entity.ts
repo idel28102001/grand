@@ -52,6 +52,13 @@ export class TrainRequestEntity {
 	@Column({ nullable: false, default: false })
 	excludeSide: boolean;
 
+	/** Look for seats only in sections sectionFrom…sectionTo (1–9); null = all. */
+	@Column({ type: 'int', nullable: true, default: null })
+	sectionFrom: number | null;
+
+	@Column({ type: 'int', nullable: true, default: null })
+	sectionTo: number | null;
+
 	/**
 	 * Signature of the tickets this request was last notified about
 	 * (trains, classes and seat counts that fit). A notification is sent

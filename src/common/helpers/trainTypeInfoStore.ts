@@ -4,6 +4,7 @@ import { Cities } from './cities';
 import { TrainTypeInfoEntity } from 'src/train-info/entities/train-type-info.entity';
 import { PlaceType } from 'src/train-info/enums/place-type.enum';
 import { TrainPositionInfoStore } from './trainPositionInfoStore';
+import type { FreeSeat } from './seat-details-parser';
 
 export class TrainTypeInfoStore implements TrainTypeInfoEntity {
 	id: number;
@@ -11,6 +12,7 @@ export class TrainTypeInfoStore implements TrainTypeInfoEntity {
 	positions: TrainPositionInfoStore[];
 	price: number;
 	type: PlaceType;
+	freeSeats: FreeSeat[][] | null = null;
 
 	citiesStore = new Cities();
 

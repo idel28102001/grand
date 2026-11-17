@@ -7,9 +7,7 @@ import { TrainTypeInfoEntity } from '../entities/train-type-info.entity';
 import { TrainInfoStore } from 'src/common/helpers/trainInfoStore';
 import { TrainTypeInfoStore } from 'src/common/helpers/trainTypeInfoStore';
 import { TrainPositionInfoStore } from 'src/common/helpers/trainPositionInfoStore';
-import type { SideCheck } from 'src/common/helpers/seatDetailsStore';
-import { PlaceType } from '../enums/place-type.enum';
-import { PlacePosition } from '../enums/place-position.enum';
+import type { RouteSeats } from 'src/common/helpers/seatDetailsStore';
 
 @Injectable()
 export class TrainInfoService {
@@ -87,21 +85,21 @@ export class TrainInfoService {
 	}
 
 	/**
-	 * Stores the side-seat check on the plackart rows of the current snapshot.
-	 * Only positions the search reported are kept.
+	 * Stores the free seats from the train pages on the class rows of the
+	 * current snapshot. A class the page does not list gets an empty list.
 	 */
-	async saveSideCheck(data: TrainInfoStore, check: SideCheck): Promise<void> {
+	async saveFreeSeats(
+		data: TrainInfoStore,
+		seats: RouteSeats,
+	): Promise<void> {
 		const info = await this.getByDate(data);
-		const seat = info?.types.find((e) => e.type === PlaceType.SEAT);
-		if (!seat?.positions.length) return;
-
-		const count = (places: SideCheck['side'], position: PlacePosition) =>
-			places.find((e) => e.position === position)?.count ?? 0;
-		for (const row of seat.positions) {
-			row.sideSpots = count(check.side, row.position);
-			row.noSideSpots = count(check.noSide, row.position);
+		for (const row of info?.types ?? []) {
+			const freeSeats = seats[row.type] ?? [];
+			await this.trainTypeRepo.update(row.id, {
+				freeSeats: freeSeats as TrainTypeInfoEntity['freeSeats'] &
+					object,
+			} as Parameters<Repository<TrainTypeInfoEntity>['update']>[1]);
 		}
-		await this.trainPositionInfoRepo.save(seat.positions);
 	}
 
 	create(data: TrainInfoStore): TrainInfoEntity {

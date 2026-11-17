@@ -208,6 +208,16 @@ export class TrainDeleteStore {
 			...(data.excludeSide
 				? [{ text: 'Боковые места', value: 'не подходят' }]
 				: []),
+			...(data.sectionFrom != null || data.sectionTo != null
+				? [
+						{
+							text: 'Секции',
+							value: `${data.sectionFrom ?? 1}–${
+								data.sectionTo ?? 9
+							}`,
+						},
+				  ]
+				: []),
 		];
 		if (isSended) {
 			return [

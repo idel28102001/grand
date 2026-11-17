@@ -49,3 +49,29 @@ export function intersectPlaces(
 export function isSidePlace(placeType: string): boolean {
 	return placeType.toLowerCase().includes('бок');
 }
+
+/** Sections (compartments) in a plackart, coupe or SV car. */
+export const SECTIONS_COUNT = 9;
+
+/**
+ * Section of a seat, counted from the start of the car (seat 1).
+ * Taken from the car schemas on grandtrain.ru (data-coupe groups):
+ *  - plackart: section N = seats 4N-3…4N and side seats 55-2N, 56-2N
+ *    (section 1: 1–4, 53, 54; section 9: 33–36, 37, 38);
+ *  - coupe: section N = seats 4N-3…4N;
+ *  - SV: section N = seats 2N-1, 2N.
+ * null for other classes (lux) and for numbers outside the standard layout.
+ */
+export function sectionOf(type: PlaceType, seat: number): number | null {
+	let section: number | null = null;
+	if (type === PlaceType.SEAT) {
+		if (seat >= 1 && seat <= 36) section = Math.ceil(seat / 4);
+		else if (seat >= 37 && seat <= 54)
+			section = Math.floor((56 - seat) / 2);
+	} else if (type === PlaceType.COUPE) {
+		if (seat >= 1 && seat <= 36) section = Math.ceil(seat / 4);
+	} else if (type === PlaceType.SV) {
+		if (seat >= 1 && seat <= 18) section = Math.ceil(seat / 2);
+	}
+	return section;
+}

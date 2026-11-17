@@ -41,6 +41,8 @@ export class TrainRequestService {
 			placeTypes: data.placeTypes,
 			specificTime: data.specificTime,
 			excludeSide: data.excludeSide,
+			sectionFrom: data.sectionFrom,
+			sectionTo: data.sectionTo,
 			user: data.user,
 		});
 	}
